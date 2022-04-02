@@ -1,0 +1,24 @@
+name: Flic demo
+
+on:
+  repository_dispatch:
+    types: [flic-create-issue]
+
+jobs:
+  issue:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Create issue
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commentBody = `
+            👋 Hey, I successfully created an issue by clicking a Flic button.`
+            await github.issues.create({
+              ...context.repo,
+              title: "Someone clicked the Flic button!",
+              labels: ['flic'],
+              body: commentBody
+            })

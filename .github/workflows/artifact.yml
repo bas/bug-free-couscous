@@ -1,0 +1,70 @@
+# pass values between 3 jobs using artifacts
+# pass value betwen steps
+# comment in an issue
+name: Share data between jobs
+
+on: 
+  pull_request:
+    types: [labeled]
+
+jobs:
+  job_1:
+    name: Add 3 and 7
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'math'
+
+    steps:
+      - uses: actions/setup-ruby@v1
+        with:
+          ruby-version: '2.6'
+      - run: ruby -e 'puts 3+7' > math-homework.txt
+      - name: Upload math result for job 1
+        uses: actions/upload-artifact@v2
+        with:
+          name: homework
+          path: math-homework.txt
+
+  job_2:
+    name: Multiply by 9
+    needs: job_1
+    runs-on: windows-latest
+    steps:
+      - name: Download math result for job 1
+        uses: actions/download-artifact@v2
+        with:
+          name: homework
+
+      - shell: bash
+        run: |
+          value=`cat math-homework.txt`
+          expr $value \* 9 > math-homework.txt
+
+      - name: Upload math result for job 2
+        uses: actions/upload-artifact@v2
+        with:
+          name: homework
+          path: math-homework.txt
+
+  job_3:
+    name: Display results
+    needs: job_2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download math result for job 2
+        uses: actions/download-artifact@v2
+        with:
+          name: homework
+
+      - name: Print the final result
+        id: print
+        run: echo ::set-output name=result::$(cat math-homework.txt)
+
+      - name: Report
+        uses: actions/github-script@v3
+        with:
+          script: |
+            await github.issues.createComment({
+              ...context.repo,
+              issue_number: context.payload.number,
+              body: 'I have done the math and the answer is: ${{ steps.print.outputs.result }} :heart::octocat:',
+            });

@@ -1,0 +1,50 @@
+# run step using public api
+# pass output form one step to the other
+# use githubscript to comment  
+name: Issue comment
+
+on:
+  issues:
+    types: 
+    - opened
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest   
+  
+    steps:  
+  
+    - name: Get a zen quote
+      uses: actions/github-script@v3
+      id: zen
+      with:
+        result-encoding: string
+        script: |
+          const result = await github.request("GET /zen")
+          console.log(result)
+          return result.data
+
+    - name: GitHub Zen comment
+      uses: actions/github-script@v3
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          await github.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '>${{ steps.zen.outputs.result }} :heart::octocat:'
+          })
+
+    - name: Add reaction
+      uses: actions/github-script@v3
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          await github.reactions.createForIssue({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            content: 'rocket'
+          })   
